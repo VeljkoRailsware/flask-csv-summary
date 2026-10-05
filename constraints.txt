@@ -1,0 +1,18 @@
+# Resolved with Python 3.12; includes runtime and test dependencies.
+blinker==1.9.0
+click==8.5.0
+dnspython==2.8.0
+email-validator==2.3.0
+flask==3.1.3
+idna==3.20
+iniconfig==2.3.0
+itsdangerous==2.2.0
+jinja2==3.1.6
+markupsafe==3.0.3
+packaging==26.3
+pluggy==1.6.0
+pygments==2.21.0
+pytest==9.1.1
+python-dotenv==1.2.4
+waitress==3.0.2
+werkzeug==3.1.9
