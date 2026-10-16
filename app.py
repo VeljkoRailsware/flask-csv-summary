@@ -2,11 +2,13 @@
 import csv
 from decimal import Decimal, InvalidOperation
 from io import StringIO
+from pathlib import PurePath
 
 from email_validator import EmailNotValidError, validate_email
 from flask import render_template, request
+from werkzeug.utils import secure_filename
 
-from core import Problem
+from core import Problem, attachment
 from flaskweb import create_base
 
 
@@ -53,6 +55,21 @@ def summarize(data: bytes):
         raise Problem('The CSV contains malformed quoting or an oversized field.') from error
 
 
+def summary_csv(summary):
+    """Totals as a CSV file; column names that a spreadsheet would run as formulas are prefixed with a quote."""
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['column', 'total'])
+    for name, total in summary['totals'].items():
+        writer.writerow(["'" + name if name.lstrip(' ')[:1] in ('=', '+', '-', '@', '\t', '\r') else name, total])
+    return output.getvalue().encode()
+
+
+def summary_filename(upload_name):
+    stem = secure_filename(PurePath(upload_name or '').stem)[:60]
+    return f'{stem or "csv"}-summary.csv'
+
+
 def create_app(settings=None, mailer=None):
     app = create_base('CSV Summary', settings, mailer)
 
@@ -67,10 +84,15 @@ def create_app(settings=None, mailer=None):
             raise Problem('Enter a valid email address for the summary.') from error
         summary = summarize(file.read(128 * 1024 + 1))
         details = '\n'.join(f'{column}: {total}' for column, total in summary['totals'].items()) or 'No fully numeric columns.'
-        result = app.extensions['store'].save(summary, {
+        message = {
             'to': recipient, 'subject': 'Your CSV summary',
             'text': f"Rows: {summary['rows']}\nColumns: {summary['columns']}\n\nNumeric totals\n{details}",
-        }, request.remote_addr or 'shared-client')
+        }
+        if summary['totals']:
+            filename = summary_filename(file.filename)
+            message['text'] += f'\n\nThe totals are attached as {filename}.'
+            message['attachment'] = attachment(summary_csv(summary), filename, 'text/csv')
+        result = app.extensions['store'].save(summary, message, request.remote_addr or 'shared-client')
         return render_template('index.html', title='CSV Summary', result=result, summary=summary), 201
 
     return app

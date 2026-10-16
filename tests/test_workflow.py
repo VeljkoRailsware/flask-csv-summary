@@ -46,3 +46,17 @@ def test_cross_origin_and_bad_email_do_not_create_reports(fixture):
     assert client.post('/summaries',headers={'Origin':'https://evil.example'}).status_code==403
     assert client.post('/summaries',data={'email':'bad','csv':(BytesIO(b'a\n1\n'),'x.csv')}).status_code==400
     assert mail.messages==[]
+
+def test_email_attaches_totals_as_a_spreadsheet_safe_csv(fixture):
+    app,client,mail,_=fixture
+    data=b'item,=HYPERLINK("x"),amount\nNotebook,2,12.50\nPencil,3,9.00\n'
+    assert client.post('/summaries',data={'email':'reader@example.com','csv':(BytesIO(data),'../May sales.csv')}).status_code==201
+    message=mail.messages[0]
+    assert message['attachment']['name']=='May_sales-summary.csv' and message['attachment']['type']=='text/csv'
+    assert 'attached as May_sales-summary.csv' in message['text']
+    assert base64.b64decode(message['attachment']['data']).decode()=='column,total\r\n"\'=HYPERLINK(""x"")",5\r\namount,21.50\r\n'
+
+def test_no_attachment_without_numeric_columns(fixture):
+    app,client,mail,_=fixture
+    assert client.post('/summaries',data={'email':'reader@example.com','csv':(BytesIO(b'name\nAlex\n'),'people.csv')}).status_code==201
+    assert 'attachment' not in mail.messages[0]

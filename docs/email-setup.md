@@ -12,7 +12,7 @@ Verify your sending domain, set `MAIL_MODE=production`, `MAIL_FROM` on that doma
 
 ## Message details
 
-The `csv.summary` category groups this workflow. `custom_variables.request_id` correlates the stored request with provider logs; `X-Request-Reference` carries its reference in the message headers. Content includes text and escaped HTML. The summary text and numeric totals are generated before sending; uploaded CSV content is never treated as HTML.
+The `csv.summary` category groups this workflow. `custom_variables.request_id` correlates the stored request with provider logs; `X-Request-Reference` carries its reference in the message headers. Content includes text and escaped HTML. The summary text and numeric totals are generated before sending; uploaded CSV content is never treated as HTML. When at least one column is numeric, the totals are also sent as a `<upload name>-summary.csv` attachment (`text/csv`, base64 in the API `attachments` array); column names that a spreadsheet would run as formulas are prefixed with `'`.
 
 ## Previews and failures
 
